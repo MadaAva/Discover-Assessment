@@ -1,0 +1,46 @@
+{
+  "version": "1.0",
+  "appId": "511efb23-27ce-4819-b445-b1717286d5fa",
+  "appDisplayName": "MD Discover Assessment",
+  "region": "prod",
+  "appType": "CodeApp",
+  "environmentId": "6dbe05cf-dc0f-e55c-a561-aaf875617cf6",
+  "description": " ",
+  "buildPath": "./dist",
+  "buildEntryPoint": "index.html",
+  "localAppUrl": "http://localhost:5173/",
+  "logoPath": "Default",
+  "connectionReferences": {},
+  "databaseReferences": {
+    "default.cds": {
+      "dataSources": {
+        "contacts": {
+          "entitySetName": "contacts",
+          "logicalName": "contact",
+          "isHidden": false
+        },
+        "opportunityassessment": {
+          "entitySetName": "cr1b4_opportunityassessments",
+          "logicalName": "cr1b4_opportunityassessment",
+          "isHidden": false
+        },
+        "contact": {
+          "entitySetName": "cr1b4_contacts",
+          "logicalName": "cr1b4_contact",
+          "isHidden": false
+        },
+        "opportunityassessmentnote": {
+          "entitySetName": "cr1b4_opportunityassessmentnotes",
+          "logicalName": "cr1b4_opportunityassessmentnote",
+          "isHidden": false
+        },
+        "opportunitystakeholder": {
+          "entitySetName": "cr1b4_opportunitystakeholders",
+          "logicalName": "cr1b4_opportunitystakeholder",
+          "isHidden": false
+        }
+      },
+      "environmentVariableName": ""
+    }
+  }
+}

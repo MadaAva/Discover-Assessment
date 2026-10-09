@@ -1,0 +1,5 @@
+cr1b4_assessmentstakeholderid,cr1b4_internalnoteflag,cr1b4_notecontent,cr1b4_notedate,cr1b4_notetitle,cr1b4_notetype,cr1b4_opportunityassessmentid
+,true,"Modernize data and improve plant resilience; address fragmented data and slow releases.",2026-10-07T00:00:00Z,"Business objectives",Customer Conversation,"Contoso cloud modernization"
+,true,"Target decision in Q3; phased delivery over 18 months.",2026-10-07T00:00:00Z,"Decision timeline",Action,"Contoso cloud modernization"
+,true,"Budget is not confirmed; funding decision is expected this year.",2026-10-05T00:00:00Z,"Funding gap",Risk,"Fabrikam customer experience"
+,true,"Executive sponsor and decision maker are not identified. There is no confirmed decision date.",2026-10-07T00:00:00Z,"Discovery gaps",Action,"Northwind supply chain discovery"

@@ -1,0 +1,168 @@
+{
+  "solution": { "displayName": "MD Discover Assessment", "uniqueName": "MDDiscoverAssessment", "publisherPrefix": "md" },
+  "normalizationNotes": [
+    "Stakeholder rows are assessment-to-contact assignments; keep role and engagement attributes on the assignment, not on Contact.",
+    "Executive Sponsor Identified and Decision Maker Identified on the assessment are transitional summary fields. Derive them from stakeholder roles in the app, then retire them after migrating the scoring workflow. Stakeholder Map Completed remains an assessment workflow flag.",
+    "Assessment History is append-only snapshot history. Dataverse auditing remains the source for field-level audit events.",
+    "Assessment Notes are structured records. Use native Dataverse Notes (annotation) instead when the requirement is only free-form notes or attachments."
+  ],
+  "relationships": [
+    {
+      "schemaName": "md_OpportunityAssessment_AssessmentStakeholder",
+      "referencedEntity": "md_opportunityassessment",
+      "referencingEntity": "md_assessmentstakeholder",
+      "lookupColumn": "md_opportunityassessmentid",
+      "cardinality": "OneToMany",
+      "required": true,
+      "cascadeConfiguration": { "Assign": "NoCascade", "Delete": "Cascade", "Merge": "NoCascade", "Reparent": "NoCascade", "Share": "NoCascade", "Unshare": "NoCascade" }
+    },
+    {
+      "schemaName": "md_Contact_AssessmentStakeholder",
+      "referencedEntity": "contact",
+      "referencingEntity": "md_assessmentstakeholder",
+      "lookupColumn": "md_contactid",
+      "cardinality": "OneToMany",
+      "required": true,
+      "cascadeConfiguration": { "Assign": "NoCascade", "Delete": "Restrict", "Merge": "NoCascade", "Reparent": "NoCascade", "Share": "NoCascade", "Unshare": "NoCascade" }
+    },
+    {
+      "schemaName": "md_OpportunityAssessment_AssessmentNote",
+      "referencedEntity": "md_opportunityassessment",
+      "referencingEntity": "md_assessmentnote",
+      "lookupColumn": "md_opportunityassessmentid",
+      "cardinality": "OneToMany",
+      "required": true,
+      "cascadeConfiguration": { "Assign": "NoCascade", "Delete": "Cascade", "Merge": "NoCascade", "Reparent": "NoCascade", "Share": "NoCascade", "Unshare": "NoCascade" }
+    },
+    {
+      "schemaName": "md_AssessmentStakeholder_AssessmentNote",
+      "referencedEntity": "md_assessmentstakeholder",
+      "referencingEntity": "md_assessmentnote",
+      "lookupColumn": "md_assessmentstakeholderid",
+      "cardinality": "OneToMany",
+      "required": false,
+      "cascadeConfiguration": { "Assign": "NoCascade", "Delete": "RemoveLink", "Merge": "NoCascade", "Reparent": "NoCascade", "Share": "NoCascade", "Unshare": "NoCascade" }
+    },
+    {
+      "schemaName": "md_OpportunityAssessment_AssessmentVersion",
+      "referencedEntity": "md_opportunityassessment",
+      "referencingEntity": "md_assessmentversion",
+      "lookupColumn": "md_opportunityassessmentid",
+      "cardinality": "OneToMany",
+      "required": true,
+      "cascadeConfiguration": { "Assign": "NoCascade", "Delete": "Restrict", "Merge": "NoCascade", "Reparent": "NoCascade", "Share": "NoCascade", "Unshare": "NoCascade" }
+    }
+  ],
+  "tableCreationOrder": ["md_opportunityassessment", "md_assessmentstakeholder", "md_assessmentnote", "md_assessmentversion"],
+  "table": {
+    "displayName": "Opportunity Assessment",
+    "pluralDisplayName": "Opportunity Assessments",
+    "logicalName": "md_opportunityassessment",
+    "schemaName": "md_OpportunityAssessment",
+    "ownership": "UserOwned",
+    "enableAuditing": true,
+    "primaryNameColumn": { "displayName": "Assessment Name", "logicalName": "md_name", "schemaName": "md_Name", "type": "Text", "maxLength": 200, "required": true },
+    "columns": [
+      { "displayName": "Customer Name", "logicalName": "md_customername", "type": "Text", "maxLength": 200 },
+      { "displayName": "Industry", "logicalName": "md_industry", "type": "Text", "maxLength": 100 },
+      { "displayName": "Region", "logicalName": "md_region", "type": "Text", "maxLength": 100 },
+      { "displayName": "Annual Revenue", "logicalName": "md_annualrevenue", "type": "Money", "precision": 2 },
+      { "displayName": "Employee Count", "logicalName": "md_employeecount", "type": "WholeNumber", "minValue": 0 },
+      { "displayName": "Existing Microsoft Customer", "logicalName": "md_existingmicrosoftcustomer", "type": "YesNo", "default": false },
+      { "displayName": "Existing Avanade Customer", "logicalName": "md_existingavanadecustomer", "type": "YesNo", "default": false },
+      { "displayName": "Business Objectives", "logicalName": "md_businessobjectives", "type": "MultilineText", "maxLength": 10000 },
+      { "displayName": "Current Initiatives", "logicalName": "md_currentinitiatives", "type": "MultilineText", "maxLength": 10000 },
+      { "displayName": "Microsoft Priorities", "logicalName": "md_microsoftpriorities", "type": "MultilineText", "maxLength": 10000 },
+      { "displayName": "Customer Pain Points", "logicalName": "md_customerpainpoints", "type": "MultilineText", "maxLength": 10000 },
+      { "displayName": "Desired Outcomes", "logicalName": "md_desiredoutcomes", "type": "MultilineText", "maxLength": 10000 },
+      { "displayName": "Risks of Doing Nothing", "logicalName": "md_risksofdoingnothing", "type": "MultilineText", "maxLength": 10000 },
+      { "displayName": "Timeline", "logicalName": "md_timeline", "type": "MultilineText", "maxLength": 4000 },
+      { "displayName": "Executive Sponsor Identified", "logicalName": "md_executivesponsoridentified", "type": "YesNo", "default": false },
+      { "displayName": "Decision Maker Identified", "logicalName": "md_decisionmakeridentified", "type": "YesNo", "default": false },
+      { "displayName": "Stakeholder Map Completed", "logicalName": "md_stakeholdermapcompleted", "type": "YesNo", "default": false },
+      { "displayName": "Strategic Customer", "logicalName": "md_strategiccustomer", "type": "YesNo", "default": false },
+      { "displayName": "Enterprise Scale", "logicalName": "md_enterprisescale", "type": "YesNo", "default": false },
+      { "displayName": "Multiple Initiatives", "logicalName": "md_multipleinitiatives", "type": "YesNo", "default": false },
+      { "displayName": "Long-Term Partnership", "logicalName": "md_longtermpartnership", "type": "YesNo", "default": false },
+      { "displayName": "Microsoft Alignment", "logicalName": "md_microsoftalignment", "type": "YesNo", "default": false },
+      { "displayName": "Budget Confirmed", "logicalName": "md_budgetconfirmed", "type": "YesNo", "default": false },
+      { "displayName": "Business Need Confirmed", "logicalName": "md_businessneedconfirmed", "type": "YesNo", "default": false },
+      { "displayName": "Executive Support Confirmed", "logicalName": "md_executivesupportconfirmed", "type": "YesNo", "default": false },
+      { "displayName": "Competitive Threat Identified", "logicalName": "md_competitivethreatidentified", "type": "YesNo", "default": false },
+      { "displayName": "Microsoft Funding Potential", "logicalName": "md_microsoftfundingpotential", "type": "YesNo", "default": false },
+      { "displayName": "Win Probability", "logicalName": "md_winprobability", "type": "Decimal", "minValue": 0, "maxValue": 100, "precision": 2 },
+      { "displayName": "Why Avanade Wins", "logicalName": "md_whyavanadewins", "type": "MultilineText", "maxLength": 10000 },
+      { "displayName": "Competitors", "logicalName": "md_competitors", "type": "MultilineText", "maxLength": 4000 },
+      { "displayName": "Key Differentiators", "logicalName": "md_keydifferentiators", "type": "MultilineText", "maxLength": 10000 },
+      { "displayName": "Delivery Risk", "logicalName": "md_deliveryrisk", "type": "Choice", "options": [{ "label": "Low", "value": 100000000 }, { "label": "Medium", "value": 100000001 }, { "label": "High", "value": 100000002 }, { "label": "Unassessed", "value": 100000003 }] },
+      { "displayName": "Commercial Risk", "logicalName": "md_commercialrisk", "type": "Choice", "options": [{ "label": "Low", "value": 100000000 }, { "label": "Medium", "value": 100000001 }, { "label": "High", "value": 100000002 }, { "label": "Unassessed", "value": 100000003 }] },
+      { "displayName": "Relationship Risk", "logicalName": "md_relationshiprisk", "type": "Choice", "options": [{ "label": "Low", "value": 100000000 }, { "label": "Medium", "value": 100000001 }, { "label": "High", "value": 100000002 }, { "label": "Unassessed", "value": 100000003 }] },
+      { "displayName": "Qualification Score", "logicalName": "md_qualificationscore", "type": "WholeNumber", "minValue": 0, "maxValue": 110 },
+      { "displayName": "Recommendation", "logicalName": "md_recommendation", "type": "Choice", "options": [{ "label": "Pursue", "value": 100000000 }, { "label": "Pursue With Risks", "value": 100000001 }, { "label": "Do Not Pursue", "value": 100000002 }] },
+      { "displayName": "Recommendation Reasoning", "logicalName": "md_recommendationreasoning", "type": "MultilineText", "maxLength": 10000 },
+      { "displayName": "Status", "logicalName": "md_status", "type": "Choice", "options": [{ "label": "Draft", "value": 100000000 }, { "label": "In Review", "value": 100000001 }, { "label": "Complete", "value": 100000002 }] },
+      { "displayName": "Last Review Date", "logicalName": "md_lastreviewdate", "type": "DateTime", "behavior": "UserLocal" },
+      { "displayName": "Version Number", "logicalName": "md_versionnumber", "type": "WholeNumber", "minValue": 0, "default": 0 }
+    ]
+  },
+  "stakeholderTable": {
+    "displayName": "Assessment Stakeholder",
+    "pluralDisplayName": "Assessment Stakeholders",
+    "logicalName": "md_assessmentstakeholder",
+    "schemaName": "md_AssessmentStakeholder",
+    "ownership": "UserOwned",
+    "enableAuditing": true,
+    "purpose": "Junction table linking an assessment to a Dataverse Contact with opportunity-specific role and engagement attributes.",
+    "primaryNameColumn": { "displayName": "Stakeholder Assignment Number", "logicalName": "md_name", "type": "Text", "maxLength": 100, "autoNumberFormat": "STK-{SEQNUM:6}" },
+    "alternateKeys": [{ "name": "md_assessment_contact_role", "columns": ["md_opportunityassessmentid", "md_contactid", "md_stakeholderrole"] }],
+    "columns": [
+      { "displayName": "Opportunity Assessment", "logicalName": "md_opportunityassessmentid", "type": "Lookup", "target": "md_opportunityassessment", "required": true },
+      { "displayName": "Contact", "logicalName": "md_contactid", "type": "Lookup", "target": "contact", "required": true },
+      { "displayName": "Stakeholder Role", "logicalName": "md_stakeholderrole", "type": "Choice", "required": true, "options": [{ "label": "Executive Sponsor", "value": 100000000 }, { "label": "Decision Maker", "value": 100000001 }, { "label": "Champion", "value": 100000002 }, { "label": "Influencer", "value": 100000003 }, { "label": "Technical Evaluator", "value": 100000004 }, { "label": "Procurement", "value": 100000005 }, { "label": "End User", "value": 100000006 }, { "label": "Blocker", "value": 100000007 }, { "label": "Other", "value": 100000008 }] },
+      { "displayName": "Influence Level", "logicalName": "md_influencelevel", "type": "Choice", "options": [{ "label": "Low", "value": 100000000 }, { "label": "Medium", "value": 100000001 }, { "label": "High", "value": 100000002 }] },
+      { "displayName": "Relationship Stance", "logicalName": "md_relationshipstance", "type": "Choice", "options": [{ "label": "Supportive", "value": 100000000 }, { "label": "Neutral", "value": 100000001 }, { "label": "Resistant", "value": 100000002 }, { "label": "Unknown", "value": 100000003 }] },
+      { "displayName": "Engagement Status", "logicalName": "md_engagementstatus", "type": "Choice", "options": [{ "label": "Not Contacted", "value": 100000000 }, { "label": "Engaged", "value": 100000001 }, { "label": "Needs Follow-up", "value": 100000002 }, { "label": "Inactive", "value": 100000003 }] },
+      { "displayName": "Last Engagement Date", "logicalName": "md_lastengagementdate", "type": "DateTime", "behavior": "UserLocal" }
+    ]
+  },
+  "noteTable": {
+    "displayName": "Assessment Note",
+    "pluralDisplayName": "Assessment Notes",
+    "logicalName": "md_assessmentnote",
+    "schemaName": "md_AssessmentNote",
+    "ownership": "UserOwned",
+    "enableAuditing": true,
+    "purpose": "Structured customer-discovery and internal pursuit notes associated with an assessment; optionally link a note to a stakeholder assignment.",
+    "primaryNameColumn": { "displayName": "Note Number", "logicalName": "md_name", "type": "Text", "maxLength": 100, "autoNumberFormat": "NOTE-{SEQNUM:6}" },
+    "columns": [
+      { "displayName": "Opportunity Assessment", "logicalName": "md_opportunityassessmentid", "type": "Lookup", "target": "md_opportunityassessment", "required": true },
+      { "displayName": "Assessment Stakeholder", "logicalName": "md_assessmentstakeholderid", "type": "Lookup", "target": "md_assessmentstakeholder", "required": false },
+      { "displayName": "Title", "logicalName": "md_title", "type": "Text", "maxLength": 200, "required": true },
+      { "displayName": "Note Content", "logicalName": "md_notecontent", "type": "MultilineText", "maxLength": 10000, "required": true },
+      { "displayName": "Note Type", "logicalName": "md_notetype", "type": "Choice", "required": true, "options": [{ "label": "Customer Conversation", "value": 100000000 }, { "label": "Decision", "value": 100000001 }, { "label": "Risk", "value": 100000002 }, { "label": "Action", "value": 100000003 }, { "label": "Internal", "value": 100000004 }, { "label": "General", "value": 100000005 }] },
+      { "displayName": "Note Date", "logicalName": "md_notedate", "type": "DateTime", "behavior": "UserLocal", "required": true },
+      { "displayName": "Internal Note", "logicalName": "md_internalnote", "type": "YesNo", "default": true }
+    ]
+  },
+  "historyTable": {
+    "displayName": "Assessment Version",
+    "pluralDisplayName": "Assessment Versions",
+    "logicalName": "md_assessmentversion",
+    "schemaName": "md_AssessmentVersion",
+    "ownership": "UserOwned",
+    "enableAuditing": true,
+    "purpose": "Append-only assessment snapshots. One record per completed review or explicitly retained revision.",
+    "primaryNameColumn": { "displayName": "Version Number", "logicalName": "md_name", "type": "Text", "maxLength": 100, "autoNumberFormat": "VER-{SEQNUM:6}" },
+    "columns": [
+      { "displayName": "Opportunity Assessment", "logicalName": "md_opportunityassessmentid", "type": "Lookup", "target": "md_opportunityassessment", "required": true },
+      { "displayName": "Version Number", "logicalName": "md_versionnumber", "type": "WholeNumber", "minValue": 1, "required": true },
+      { "displayName": "Captured On", "logicalName": "md_capturedon", "type": "DateTime", "behavior": "UserLocal", "required": true },
+      { "displayName": "History Event", "logicalName": "md_historyevent", "type": "Choice", "required": true, "options": [{ "label": "Review Completed", "value": 100000000 }, { "label": "Recommendation Changed", "value": 100000001 }, { "label": "Assessment Updated", "value": 100000002 }] },
+      { "displayName": "Qualification Score", "logicalName": "md_qualificationscore", "type": "WholeNumber", "minValue": 0, "maxValue": 110, "required": true },
+      { "displayName": "Recommendation", "logicalName": "md_recommendation", "type": "Choice", "required": true, "options": [{ "label": "Pursue", "value": 100000000 }, { "label": "Pursue With Risks", "value": 100000001 }, { "label": "Do Not Pursue", "value": 100000002 }] },
+      { "displayName": "Recommendation Reasoning", "logicalName": "md_recommendationreasoning", "type": "MultilineText", "maxLength": 10000 },
+      { "displayName": "Assessment Snapshot JSON", "logicalName": "md_assessmentsnapshotjson", "type": "MultilineText", "maxLength": 1048576, "required": true },
+      { "displayName": "Change Summary", "logicalName": "md_changesummary", "type": "MultilineText", "maxLength": 4000 }
+    ]
+  }
+}
