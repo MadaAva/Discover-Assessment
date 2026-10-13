@@ -30,6 +30,7 @@ export interface Cr1b4_opportunityassessmentsBase {
   cr1b4_recommendationreasoning?: string;
   cr1b4_versionnumber?: number;
   importsequencenumber?: number;
+  md_assessmentsnapshotfull?: string;
   overriddencreatedon?: string;
   statecode: Cr1b4_opportunityassessmentsstatecode;
   statuscode?: Cr1b4_opportunityassessmentsstatuscode;

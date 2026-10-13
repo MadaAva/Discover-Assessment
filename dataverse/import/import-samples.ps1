@@ -1,4 +1,4 @@
-param([switch]$Import)
+param([switch]$Import, [switch]$MigrateSnapshots)
 
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
@@ -19,6 +19,10 @@ $definitions = @(
     } }
 )
 
+if ($MigrateSnapshots) {
+    $definitions = @($definitions | Where-Object { $_.Name -eq 'cr1b4_opportunityassessment' })
+}
+
 $schema = [System.Xml.XmlDocument]::new()
 $entities = $schema.CreateElement('entities')
 $schema.AppendChild($entities) | Out-Null
@@ -33,7 +37,9 @@ foreach ($definition in $definitions) {
     $entity.SetAttribute('primarynamefield', $definition.Key[0])
     $entity.SetAttribute('disableplugins', 'false')
     $fields = $schema.CreateElement('fields')
-    foreach ($column in @($definition.Name + 'id') + @($rows[0].PSObject.Properties.Name)) {
+    $columns = @($definition.Name + 'id') + @($rows[0].PSObject.Properties.Name)
+    if ($MigrateSnapshots) { $columns += 'md_assessmentsnapshotfull' }
+    foreach ($column in $columns) {
         $field = $schema.CreateElement('field')
         $field.SetAttribute('name', $column)
         $field.SetAttribute('displayname', $column)
@@ -73,6 +79,63 @@ function Get-ExportValues($record) {
 }
 
 [xml]$existing = Get-Content (Join-Path $workPath 'existing/data.xml') -Raw
+if ($MigrateSnapshots) {
+    $sourceRecords = @($existing.entities.entity.records.record)
+    if ($sourceRecords.Count -ne 4) { throw "Expected the four existing assessment rows; found $($sourceRecords.Count). No migration attempted." }
+    $migration = [System.Xml.XmlDocument]::new()
+    $migration.LoadXml('<entities><entity name="cr1b4_opportunityassessment" displayname="cr1b4_opportunityassessment"><records/><m2mrelationships/></entity></entities>')
+    $expectedSnapshots = @{}
+    foreach ($sourceRecord in $sourceRecords) {
+        $values = Get-ExportValues $sourceRecord
+        $recordId = $values['cr1b4_opportunityassessmentid']
+        $legacySnapshot = $values['cr1b4_assessmentsnapshotjson']
+        $fullSnapshot = $values['md_assessmentsnapshotfull']
+        $expectedSnapshots[$recordId] = @{ Legacy = $legacySnapshot; Full = $fullSnapshot }
+        if ($fullSnapshot) { Write-Output "$recordId already has a full snapshot; preserving it."; continue }
+        if (-not $legacySnapshot) { throw "Assessment $recordId has no legacy snapshot. No migration attempted." }
+        $legacySnapshot | ConvertFrom-Json | Out-Null
+        $expectedSnapshots[$recordId].Full = $legacySnapshot
+        $record = $migration.CreateElement('record')
+        $record.SetAttribute('id', $recordId)
+        foreach ($column in @('cr1b4_opportunityassessmentid', 'md_assessmentsnapshotfull')) {
+            $field = $migration.CreateElement('field')
+            $field.SetAttribute('name', $column)
+            $value = if ($column -eq 'cr1b4_opportunityassessmentid') { $recordId } else { $legacySnapshot }
+            $field.SetAttribute('value', [System.Net.WebUtility]::HtmlEncode($value))
+            $record.AppendChild($field) | Out-Null
+        }
+        $migration.entities.entity.records.AppendChild($record) | Out-Null
+    }
+    $pending = $migration.entities.entity.records.ChildNodes.Count
+    Write-Output "Prepared $pending snapshot column updates; existing IDs, legacy JSON, and all other fields are preserved."
+    if (-not $Import) { Write-Output 'Dry run only. Pass -Import -MigrateSnapshots to migrate.'; return }
+    if (-not $pending) { Write-Output 'All four snapshots are already migrated.'; return }
+    $migrationPath = Join-Path $workPath 'snapshot-migration'
+    New-Item -ItemType Directory -Path $migrationPath | Out-Null
+    $migration.Save((Join-Path $migrationPath 'data.xml'))
+    Copy-Item (Join-Path $workPath 'existing/data_schema.xml') (Join-Path $migrationPath 'data_schema.xml')
+    $migrationZip = Join-Path $workPath 'snapshot-migration.zip'
+    Compress-Archive -Path (Join-Path $migrationPath '*') -DestinationPath $migrationZip
+    & pac data import --environment $config.environmentId --data $migrationZip --connection-count 1
+    if ($LASTEXITCODE -ne 0) { throw 'Snapshot migration import failed.' }
+    $verifiedZip = Join-Path $workPath 'verified.zip'
+    & pac data export --environment $config.environmentId --schemaFile $schemaPath --dataFile $verifiedZip
+    if ($LASTEXITCODE -ne 0) { throw 'Snapshot migration verification export failed.' }
+    Expand-Archive -Path $verifiedZip -DestinationPath (Join-Path $workPath 'verified')
+    [xml]$verified = Get-Content (Join-Path $workPath 'verified/data.xml') -Raw
+    $verifiedRecords = @($verified.entities.entity.records.record)
+    if ($verifiedRecords.Count -ne $expectedSnapshots.Count) { throw 'Assessment record count changed during migration.' }
+    $verifiedIds = [System.Collections.Generic.HashSet[string]]::new()
+    foreach ($record in $verifiedRecords) {
+        $values = Get-ExportValues $record
+        $recordId = $values['cr1b4_opportunityassessmentid']
+        if (-not $expectedSnapshots.ContainsKey($recordId) -or -not $verifiedIds.Add($recordId)) { throw 'Assessment IDs changed during migration.' }
+        if ($values['md_assessmentsnapshotfull'] -cne $expectedSnapshots[$recordId].Full) { throw "Full snapshot mismatch for $recordId" }
+        if ($values['cr1b4_assessmentsnapshotjson'] -cne $expectedSnapshots[$recordId].Legacy) { throw "Legacy snapshot changed for $recordId" }
+    }
+    Write-Output "Verified all $($verifiedIds.Count) rows: full snapshots copied exactly and legacy snapshots unchanged."
+    return
+}
 $data = [System.Xml.XmlDocument]::new()
 $dataEntities = $data.CreateElement('entities')
 $data.AppendChild($dataEntities) | Out-Null

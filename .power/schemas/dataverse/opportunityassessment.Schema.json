@@ -105,7 +105,7 @@
           "x-ms-dataverse-attribute": "cr1b4_recommendationreasoning",
           "x-ms-dataverse-type": "StringType",
           "x-ms-schema-name": "cr1b4_recommendationreasoning",
-          "maxLength": 200
+          "maxLength": 4000
         },
         "cr1b4_versionnumber": {
           "type": "string",
@@ -192,6 +192,14 @@
           "x-ms-dataverse-attribute": "importsequencenumber",
           "x-ms-dataverse-type": "IntegerType",
           "x-ms-schema-name": "ImportSequenceNumber"
+        },
+        "md_assessmentsnapshotfull": {
+          "type": "string",
+          "title": "Assessment Snapshot Full",
+          "x-ms-dataverse-attribute": "md_assessmentsnapshotfull",
+          "x-ms-dataverse-type": "MemoType",
+          "x-ms-schema-name": "md_AssessmentSnapshotFull",
+          "maxLength": 1048576
         },
         "modifiedby": {
           "type": "string",

@@ -14,7 +14,11 @@ Power Apps Code App for opportunity qualification and customer discovery during 
 - Snapshot-backed assessment repository with revision grouping and demo fallback.
 - Import CSVs aligned to the currently published table columns in `dataverse/import/`.
 
-The current assessment repository persists the complete assessment as JSON in `cr1b4_assessmentsnapshotjson`, while writing searchable name, score, version, and recommendation summary fields through the generated Dataverse service. This preserves all wizard fields that are not separate columns in the published table. Generated insights are rules-based, not AI-generated; the service boundary can host future Copilot or AI implementations.
+The assessment repository persists the complete assessment as JSON in `md_assessmentsnapshotfull` (plain multiline text, maximum 1,048,576 characters), while writing searchable name, score, version, and recommendation summary fields through the generated Dataverse service. Reads prefer this column and fall back to `cr1b4_assessmentsnapshotjson` for legacy rows; new saves do not write the legacy column. Recommendation reasoning is limited to 4,000 characters. This preserves all wizard fields that are not separate columns in the published table. Generated insights are rules-based, not AI-generated; the service boundary can host future Copilot or AI implementations.
+
+When loaded in the Power Apps host, the app copies legacy JSON into the new column for active rows that do not yet have a full snapshot, then reads each row back to verify both snapshot values. This uses the signed-in browser's Dataverse connector and changes no IDs, versions, or old snapshots. Existing full snapshots are preserved. The migration copies recorded data only; it does not reconstruct historical wizard inputs absent from the legacy snapshots. Dataverse updates the system modified date as usual.
+
+For a separate CLI migration of the four sample rows, run `./dataverse/import/import-samples.ps1 -MigrateSnapshots` for a dry run, then add `-Import` to apply and verify the updates. This alternative requires an authenticated Power Platform CLI session.
 
 ## Run locally
 

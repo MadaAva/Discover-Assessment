@@ -5,6 +5,7 @@ import { calculateScore } from '../domain/scoring'
 
 const selectColumns = [
   'cr1b4_assessmentsnapshotjson',
+  'md_assessmentsnapshotfull',
   'cr1b4_capturedon',
   'cr1b4_changesummary',
   'cr1b4_historyevent',
@@ -50,8 +51,9 @@ interface SnapshotPayload {
 
 function parseSnapshot(record: Cr1b4_opportunityassessments): SnapshotPayload {
   let snapshot: SnapshotPayload = { assessment: {} }
-  if (record.cr1b4_assessmentsnapshotjson) {
-    const parsed: unknown = JSON.parse(record.cr1b4_assessmentsnapshotjson)
+  const snapshotJson = record.md_assessmentsnapshotfull || record.cr1b4_assessmentsnapshotjson
+  if (snapshotJson) {
+    const parsed: unknown = JSON.parse(snapshotJson)
     if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
       const data = parsed as SnapshotPayload & Partial<Assessment>
       snapshot = {
@@ -62,6 +64,10 @@ function parseSnapshot(record: Cr1b4_opportunityassessments): SnapshotPayload {
     }
   }
   return snapshot
+}
+
+function fallbackAssessmentId(value: string): string {
+  return `dataverse-${value.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
 }
 
 function toAssessment(records: Cr1b4_opportunityassessments[], groupKey: string): Assessment {
@@ -75,9 +81,9 @@ function toAssessment(records: Cr1b4_opportunityassessments[], groupKey: string)
   const demo = demoAssessments.find((item) => item.name === displayName || item.customerName === displayName)
   const fallback = demo ? { ...demo } : createAssessment()
   const stored = latestSnapshot.assessment
-  const id = stored.id || `dataverse-${groupKey.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
+  const id = stored.id || groupKey
   const baseScore = calculateScore({ ...fallback, ...stored })
-  const rowHistory = ordered.map((record) => {
+  const rowHistory = ordered.filter((record) => (record.cr1b4_versionnumber ?? parseSnapshot(record).assessment.version ?? 0) > 0).map((record) => {
     const snapshot = parseSnapshot(record)
     const score = Math.max(0, Math.min(100, snapshot.score ?? record.cr1b4_qualificationscore ?? baseScore.score))
     const recommendation = snapshot.recommendation
@@ -98,20 +104,33 @@ function toAssessment(records: Cr1b4_opportunityassessments[], groupKey: string)
     ...fallback,
     ...stored,
     id,
-    name: stored.name || demo?.name || displayName,
-    customerName: stored.customerName || demo?.customerName || displayName,
+    name: stored.name ?? demo?.name ?? displayName,
+    customerName: stored.customerName ?? demo?.customerName ?? displayName,
     recommendationReasoning: stored.recommendationReasoning || latest.cr1b4_recommendationreasoning || '',
     status: stored.status || (latest.cr1b4_historyevent === 'Review Completed' ? 'Complete' : 'Draft'),
-    lastReviewDate: stored.lastReviewDate || latest.cr1b4_capturedon || null,
+    lastReviewDate: stored.lastReviewDate !== undefined ? stored.lastReviewDate : latest.cr1b4_historyevent === 'Review Completed' ? latest.cr1b4_capturedon || null : null,
     version: stored.version ?? latest.cr1b4_versionnumber ?? 0,
     history: [...historyByVersion.values()].sort((left, right) => left.version - right.version),
     updatedAt: stored.updatedAt || latest.modifiedon || latest.cr1b4_capturedon || fallback.updatedAt,
   }
 }
 
-function getErrorMessage(error: unknown) {
+function getErrorMessage(error: unknown, depth = 0): string {
   if (error instanceof Error) return error.message
   if (typeof error === 'string') return error
+  if (error && typeof error === 'object' && depth < 4) {
+    const details = error as Record<string, unknown>
+    for (const key of ['message', 'description']) {
+      if (typeof details[key] === 'string' && details[key].trim()) return details[key]
+    }
+    for (const key of ['error', 'innerError', 'innererror']) {
+      if (details[key]) {
+        const message = getErrorMessage(details[key], depth + 1)
+        if (message !== 'Unknown Dataverse data operation error.') return message
+      }
+    }
+    if (typeof details.code === 'string') return `Dataverse error ${details.code}`
+  }
   return 'Unknown Dataverse data operation error.'
 }
 
@@ -134,7 +153,24 @@ export class DataverseAssessmentRepository implements AssessmentRepository {
     const groups = new Map<string, Cr1b4_opportunityassessments[]>()
     for (const record of records) {
       const snapshot = parseSnapshot(record)
-      const groupKey = snapshot.assessment.id || record.cr1b4_opportunityname || record.cr1b4_opportunityassessmentid
+      if (!record.md_assessmentsnapshotfull && record.cr1b4_assessmentsnapshotjson) {
+        const legacySnapshot = record.cr1b4_assessmentsnapshotjson
+        const migration = await Cr1b4_opportunityassessmentsService.update(record.cr1b4_opportunityassessmentid, {
+          md_assessmentsnapshotfull: legacySnapshot,
+        })
+        if (migration.error) throw new Error(`Snapshot migration failed: ${getErrorMessage(migration.error)}`)
+        const verification = await Cr1b4_opportunityassessmentsService.get(record.cr1b4_opportunityassessmentid, {
+          select: ['md_assessmentsnapshotfull', 'cr1b4_assessmentsnapshotjson'],
+        })
+        if (verification.error) throw new Error(`Snapshot migration verification failed: ${getErrorMessage(verification.error)}`)
+        if (verification.data?.md_assessmentsnapshotfull !== legacySnapshot
+          || verification.data?.cr1b4_assessmentsnapshotjson !== legacySnapshot) {
+          throw new Error(`Snapshot migration could not be verified for ${record.cr1b4_opportunityassessmentid}.`)
+        }
+        record.md_assessmentsnapshotfull = legacySnapshot
+      }
+      const groupKey = snapshot.assessment.id
+        || fallbackAssessmentId(record.cr1b4_opportunityname || record.cr1b4_opportunityassessmentid)
       groups.set(groupKey, [...(groups.get(groupKey) ?? []), record])
     }
 
@@ -162,6 +198,8 @@ export class DataverseAssessmentRepository implements AssessmentRepository {
     for (const assessment of assessments) {
       const snapshot = JSON.stringify(assessment)
       if (this.savedSnapshots.get(assessment.id) === snapshot) continue
+      if (snapshot.length > 1048576) throw new Error('Assessment snapshot exceeds the 1,048,576-character limit.')
+      if (assessment.recommendationReasoning.length > 4000) throw new Error('Recommendation reasoning exceeds the 4,000-character limit.')
 
       const score = calculateScore(assessment)
       const summaryRecommendation = score.recommendation === 'Pursue'
@@ -171,8 +209,8 @@ export class DataverseAssessmentRepository implements AssessmentRepository {
           : null
       const record: Omit<Cr1b4_opportunityassessmentsBase, 'cr1b4_opportunityassessmentid'> = {
         statecode: 0,
-        cr1b4_opportunityname: assessment.customerName || assessment.name || 'Untitled assessment',
-        cr1b4_assessmentsnapshotjson: snapshot,
+        cr1b4_opportunityname: assessment.name || assessment.customerName || 'Untitled assessment',
+        md_assessmentsnapshotfull: snapshot,
         cr1b4_capturedon: assessment.lastReviewDate || assessment.updatedAt,
         cr1b4_changesummary: assessment.status === 'Complete'
           ? `Review completed at version ${assessment.version}`
